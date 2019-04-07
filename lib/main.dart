@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart';
+import 'package:html/parser.dart';
 
 void main() => runApp(MyApp());
 
@@ -20,7 +23,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'MMA Calendar'),
     );
   }
 }
@@ -44,8 +47,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  String testText = 'You have pushed the button this many times: ';
+  String statusString = 'Push the button to load MMA Events into Calendar';
   bool checkBoxPressed = false;
   bool queryUFC = true;
   bool queryBellator = true;
@@ -67,6 +69,49 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       queryInvictus = bool;
     });
+  }
+
+  Future _queryMMAWebsite() async {
+    //Method to query MMA Events from mmafighting.com
+
+    var client = Client();
+    Response response = await client.get('https://www.mmafighting.com/schedule');
+
+    if (response.statusCode != 200){
+      //If HTTP OK response is note received, return empty body and let user
+      //know if connection error
+      setState(() {
+        statusString = 'Error Connecting to Network';
+      });
+      return response.body;
+    }
+
+    var document = parse(response.body);
+
+    //Get Dates (Dates all have H3 headers)
+    var eventDate = document.querySelectorAll('h3');
+    var eventDateIterator = eventDate.iterator;
+
+    //Get Fights and Event Titles
+    var fightLinks = document.querySelectorAll('a');
+    var fightString = new StringBuffer('');
+    for(var link in fightLinks){
+      String title = link.text;
+      String href = link.attributes['href'];
+      if(href != null && href.contains('fight-card')){
+        fightString.write('\nFight Card : ' + title + '\n');
+        if(eventDateIterator.moveNext()){
+          fightString.write('Date: ' + eventDateIterator.current.text + '\n');
+        }
+      } else if(href != null && href.contains('/fight/')){
+        fightString.write('Fight: ' + title + '\n');
+      }
+    }
+
+    setState(() {
+      statusString = fightString.toString();
+    });
+    return response.body;
   }
 
   @override
@@ -121,11 +166,12 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
             Text(
-              testText,
+              statusString,
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
+            FloatingActionButton(
+              onPressed: () {
+                _queryMMAWebsite();
+              },
             ),
           ],
         ),
