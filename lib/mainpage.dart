@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart';
 import 'package:html/parser.dart';
+import 'mmaobjects.dart';
 
 class MainPage extends StatefulWidget {
   MainPage({Key key, this.title}) : super(key: key);
@@ -72,17 +73,28 @@ class _MainPageState extends State<MainPage> {
     //Fights all contain '/fight/' in the link HREF attribute
     var fightLinks = document.querySelectorAll('a');
     var fightString = new StringBuffer('');
+
+    List<MMAEvent> mmaEvents = [];
+
     for(var link in fightLinks){
       String title = link.text;
       String href = link.attributes['href'];
       if(href != null && href.contains('fight-card')){
-        fightString.write('\nFight Card : ' + title + '\n');
+        //fightString.write('\nFight Card : ' + title + '\n');
+        var mmaEvent = new MMAEvent(title);
+        mmaEvents.add(mmaEvent);
         if(eventDateIterator.moveNext()){
-          fightString.write('Date: ' + eventDateIterator.current.text + '\n');
+          mmaEvent.addDate(eventDateIterator.current.text);
+          //fightString.write('Date: ' + eventDateIterator.current.text + '\n');
         }
       } else if(href != null && href.contains('/fight/')){
-        fightString.write('Fight: ' + title + '\n');
+        mmaEvents.elementAt(mmaEvents.length - 1).addFight(title);
+        //fightString.write('Fight: ' + title + '\n');
       }
+    }
+
+    for(var mmaEvent in mmaEvents){
+      fightString.write(mmaEvent.toString());
     }
 
     setState(() {
@@ -142,8 +154,12 @@ class _MainPageState extends State<MainPage> {
                     onChanged: _toggleQueryInvictus),
               ],
             ),
-            Text(
-              statusString,
+            new Expanded(
+                child: SingleChildScrollView(
+                  child: Text(
+                    statusString,
+                  ),
+                ),
             ),
             FloatingActionButton(
               onPressed: () {
