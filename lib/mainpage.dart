@@ -7,15 +7,9 @@ import 'mmaobjects.dart';
 class MainPage extends StatefulWidget {
   MainPage({Key key, this.title}) : super(key: key);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  // Main Page (Stateful)
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
+  // Page title
   final String title;
 
   @override
@@ -23,11 +17,12 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  String statusString = 'Push the button to load MMA Events into Calendar';
-  bool checkBoxPressed = false;
+  String statusString = 'Push the button to load MMA Events into Calendar'; //Status displayed to user
   bool queryUFC = true;
   bool queryBellator = true;
-  bool queryInvictus = true;
+  bool queryInvictaFC = true;
+  bool queryPFL = true;
+  bool queryOneFC = true;
 
   void _toggleQueryUFC(bool) {
     setState(() {
@@ -41,17 +36,51 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  void _toggleQueryInvictus(bool) {
+  void _toggleQueryInvictaFC(bool) {
     setState(() {
-      queryInvictus = bool;
+      queryInvictaFC = bool;
     });
   }
 
-  Future _queryMMAWebsite() async {
-    //Method to query MMA Events from mmafighting.com
+  void _toggleQueryPFL(bool){
+    setState(() {
+      queryPFL = bool;
+    });
+  }
+
+  void _toggleQueryOneFC(bool){
+    setState(() {
+      queryOneFC = bool;
+    });
+  }
+
+  void _queryMMAWebsite(){
+    if(queryUFC){
+      _queryAndParseMMAWebsite('ufc');
+    }
+    if(queryBellator){
+      _queryAndParseMMAWebsite('bellator');
+    }
+    if(queryInvictaFC){
+      _queryAndParseMMAWebsite('invicta-fc');
+    }
+    if(queryOneFC){
+      _queryAndParseMMAWebsite('one-fc');
+    }
+    if(queryPFL){
+      _queryAndParseMMAWebsite('pfl');
+    }
+  }
+
+  Future _queryAndParseMMAWebsite(String eventType) async {
+    //Method to query mmafighting.com parse data for upcoming MMA Events
+    //eventType can be 'UFC', 'Bellator', 'Invicta-FC', 'PFL', 'ONE FC'
+    //Different event types are queried depending on which checkboxes user has selected from main page UI
 
     var client = Client();
-    Response response = await client.get('https://www.mmafighting.com/schedule');
+    StringBuffer url = new StringBuffer('https://www.mmafighting.com/schedule');
+    url.write('/' + eventType);
+    Response response = await client.get(url.toString());
 
     if (response.statusCode != 200){
       //If HTTP OK response is not received, return empty body and let user
@@ -74,22 +103,26 @@ class _MainPageState extends State<MainPage> {
     var fightLinks = document.querySelectorAll('a');
     var fightString = new StringBuffer('');
 
+    //List of MMA Events to create from parsed data
     List<MMAEvent> mmaEvents = [];
 
     for(var link in fightLinks){
       String title = link.text;
       String href = link.attributes['href'];
-      if(href != null && href.contains('fight-card')){
-        //fightString.write('\nFight Card : ' + title + '\n');
+      if(title != null && href != null && href.contains('fight-card')){
+        //If link contains 'fight card', link is referencing the event name
+        //Create a new event with the event name
         var mmaEvent = new MMAEvent(title);
         mmaEvents.add(mmaEvent);
         if(eventDateIterator.moveNext()){
+          //For every event name, there is an associated date (in the same order)
+          //Move the iterator to the next date and add the date to the MMA Event
           mmaEvent.addDate(eventDateIterator.current.text);
-          //fightString.write('Date: ' + eventDateIterator.current.text + '\n');
         }
-      } else if(href != null && href.contains('/fight/')){
+      } else if(title != null && href != null && href.contains('/fight/')){
+        //If the link contains '/fight/' then it is fight data
+        //Add the fight data to the current event (last event in list of MMA events)
         mmaEvents.elementAt(mmaEvents.length - 1).addFight(title);
-        //fightString.write('Fight: ' + title + '\n');
       }
     }
 
@@ -98,7 +131,7 @@ class _MainPageState extends State<MainPage> {
     }
 
     setState(() {
-      statusString = fightString.toString();
+      statusString = statusString + fightString.toString();
     });
     return response.body;
   }
@@ -149,9 +182,17 @@ class _MainPageState extends State<MainPage> {
                     title: const Text('Bellator'),
                     onChanged: _toggleQueryBellator),
                 CheckboxListTile(
-                    value: queryInvictus,
-                    title: const Text('Invictus'),
-                    onChanged: _toggleQueryInvictus),
+                    value: queryInvictaFC,
+                    title: const Text('Invicta FC'),
+                    onChanged: _toggleQueryInvictaFC),
+                CheckboxListTile(
+                    value: queryOneFC,
+                    title: const Text('One FC'),
+                    onChanged: _toggleQueryOneFC),
+                CheckboxListTile(
+                    value: queryPFL,
+                    title: const Text('PFL'),
+                    onChanged: _toggleQueryPFL),
               ],
             ),
             new Expanded(

@@ -3,6 +3,9 @@ import 'mainpage.dart';
 
 class MMAEvent {
 
+  //Class to store MMA Event Data
+
+  bool readyForCalendar = true;
   String eventName;
   DateTime eventDate;
   StringBuffer eventFights = new StringBuffer(''); //StringBuffer to display list of fights
@@ -16,13 +19,23 @@ class MMAEvent {
   }
 
   void addDate(String date){
+
+    //Add a dateTime for this event based on input String date parsed from website
+
+    //Website date is in the following example format 'May 3, 2019'
+    //Split the date by space to separate Month, Day and Year
     List<String> dateSplit = date.split(' ');
+
+    //Create StringBuffer for formatted string for DateTime to parse using dateTime.parse() method
+    //StringBuffer will be in format 'YYYY-MM-DD 12:00:00'
+    //Time will be left as 12:00:00 for now since mmafighting website doesn't have event times
     StringBuffer formattedDateString = new StringBuffer('');
     
     String year = dateSplit.elementAt(2);
     String month = dateSplit.elementAt(0);
     String day = dateSplit.elementAt(1).substring(0, dateSplit.elementAt(1).indexOf(','));
     if(day.length == 1){
+      //If the day is 1 digit, it must have a 0 in front of it for dateTime.parse() method to work properly
       day = '0' + day;
     }
     
@@ -75,7 +88,8 @@ class MMAEvent {
     try{
       this.eventDate = DateTime.parse(formattedDateString.toString());
     } catch(e){
-
+      //If exception occurs when parsing date, ensure that date is not added to calendar
+      readyForCalendar = false;
     }
 
 
