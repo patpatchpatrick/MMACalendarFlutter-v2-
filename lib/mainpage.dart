@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'package:http/http.dart';
 import 'package:html/parser.dart';
 import 'mmaobjects.dart';
@@ -154,28 +153,35 @@ class _MainPageState extends State<MainPage> {
 
     for (var mmaEvent in mmaEvents) {
 
-      final eventTime = mmaEvent.eventDate;
-      final eventToCreate = new Event(_currentCalendarID);
-      eventToCreate.title = mmaEvent.eventName;
-      eventToCreate.start = eventTime;
-      eventToCreate.description = mmaEvent.eventFights.toString();
-      String mmaEventId = prefs.getString(mmaEvent.getPrefKey());
-      if(mmaEventId != null){
-        eventToCreate.eventId = mmaEventId;
-      }
-      eventToCreate.end = eventTime.add(new Duration(hours: 3));
-      final createEventResult = await _deviceCalendarPlugin
-          .createOrUpdateEvent(eventToCreate);
-      if (createEventResult.isSuccess &&
-          (createEventResult.data?.isNotEmpty ?? false)) {
-        prefs.setString(mmaEvent.getPrefKey(), createEventResult.data);
-        fightString.write(mmaEvent.eventName + '\n');
+      //Before adding MMA Event to calendar, check if it is ready for calendar
+      // (i.e. ensure it is properly formatted)
+      if(mmaEvent.readyForCalendar){
+
+        final eventTime = mmaEvent.eventDate;
+        final eventToCreate = new Event(_currentCalendarID);
+        eventToCreate.title = mmaEvent.eventName;
+        eventToCreate.start = eventTime;
+        eventToCreate.description = mmaEvent.eventFights.toString();
+        String mmaEventId = prefs.getString(mmaEvent.getPrefKey());
+        if(mmaEventId != null){
+          eventToCreate.eventId = mmaEventId;
+        }
+        eventToCreate.end = eventTime.add(new Duration(hours: 3));
+        final createEventResult = await _deviceCalendarPlugin
+            .createOrUpdateEvent(eventToCreate);
+        if (createEventResult.isSuccess &&
+            (createEventResult.data?.isNotEmpty ?? false)) {
+          prefs.setString(mmaEvent.getPrefKey(), createEventResult.data);
+          fightString.write(mmaEvent.eventName + '\n');
+        }
+
+
       }
 
     }
 
     setState(() {
-      statusString = statusString + fightString.toString();
+      statusString = fightString.toString();
     });
 
   }
