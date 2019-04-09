@@ -10,7 +10,6 @@ class DeviceCommunication{
   static addToCalendar(){
 
 
-
   }
 
 }

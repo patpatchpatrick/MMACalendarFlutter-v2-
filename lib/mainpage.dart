@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart';
 import 'package:html/parser.dart';
 import 'mmaobjects.dart';
+import 'package:device_calendar/device_calendar.dart';
+import 'package:mma_calendar_flutter/calendarpage.dart';
 
 class MainPage extends StatefulWidget {
   MainPage({Key key, this.title}) : super(key: key);
@@ -17,12 +19,44 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  String statusString = 'Push the button to load MMA Events into Calendar'; //Status displayed to user
+  String statusString =
+      'Push the button to load MMA Events into Calendar'; //Status displayed to user
   bool queryUFC = true;
   bool queryBellator = true;
   bool queryInvictaFC = true;
   bool queryPFL = true;
   bool queryOneFC = true;
+  bool calendarSelected = false;
+  String _currentCalendarID = '';
+  DeviceCalendarPlugin _deviceCalendarPlugin = new DeviceCalendarPlugin();
+
+  void setCalendarIDCallback(String calendarID, String calendarName) {
+    setState(() {
+      _currentCalendarID = calendarID;
+      statusString = calendarID + calendarName;
+      calendarSelected = false;
+    });
+  }
+
+  Widget buttonOrNot(){
+    if (!calendarSelected){
+      return new IconButton(icon: Icon(Icons.calendar_today),
+          onPressed: () {
+        setState(() {
+          calendarSelected = true;
+        });
+          }
+      );
+    } else {
+      return new CalendarPage(this.setCalendarIDCallback);
+    }
+  }
+
+  void setDeviceCalendarCallback(DeviceCalendarPlugin deviceCalendar){
+    setState(() {
+      _deviceCalendarPlugin = deviceCalendar;
+    });
+  }
 
   void _toggleQueryUFC(bool) {
     setState(() {
@@ -42,32 +76,32 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  void _toggleQueryPFL(bool){
+  void _toggleQueryPFL(bool) {
     setState(() {
       queryPFL = bool;
     });
   }
 
-  void _toggleQueryOneFC(bool){
+  void _toggleQueryOneFC(bool) {
     setState(() {
       queryOneFC = bool;
     });
   }
 
-  void _queryMMAWebsite(){
-    if(queryUFC){
+  void _queryMMAWebsite() {
+    if (queryUFC) {
       _queryAndParseMMAWebsite('ufc');
     }
-    if(queryBellator){
+    if (queryBellator) {
       _queryAndParseMMAWebsite('bellator');
     }
-    if(queryInvictaFC){
+    if (queryInvictaFC) {
       _queryAndParseMMAWebsite('invicta-fc');
     }
-    if(queryOneFC){
+    if (queryOneFC) {
       _queryAndParseMMAWebsite('one-fc');
     }
-    if(queryPFL){
+    if (queryPFL) {
       _queryAndParseMMAWebsite('pfl');
     }
   }
@@ -82,7 +116,7 @@ class _MainPageState extends State<MainPage> {
     url.write('/' + eventType);
     Response response = await client.get(url.toString());
 
-    if (response.statusCode != 200){
+    if (response.statusCode != 200) {
       //If HTTP OK response is not received, return empty body and let user
       //know if connection error
       setState(() {
@@ -106,27 +140,27 @@ class _MainPageState extends State<MainPage> {
     //List of MMA Events to create from parsed data
     List<MMAEvent> mmaEvents = [];
 
-    for(var link in fightLinks){
+    for (var link in fightLinks) {
       String title = link.text;
       String href = link.attributes['href'];
-      if(title != null && href != null && href.contains('fight-card')){
+      if (title != null && href != null && href.contains('fight-card')) {
         //If link contains 'fight card', link is referencing the event name
         //Create a new event with the event name
         var mmaEvent = new MMAEvent(title);
         mmaEvents.add(mmaEvent);
-        if(eventDateIterator.moveNext()){
+        if (eventDateIterator.moveNext()) {
           //For every event name, there is an associated date (in the same order)
           //Move the iterator to the next date and add the date to the MMA Event
           mmaEvent.addDate(eventDateIterator.current.text);
         }
-      } else if(title != null && href != null && href.contains('/fight/')){
+      } else if (title != null && href != null && href.contains('/fight/')) {
         //If the link contains '/fight/' then it is fight data
         //Add the fight data to the current event (last event in list of MMA events)
         mmaEvents.elementAt(mmaEvents.length - 1).addFight(title);
       }
     }
 
-    for(var mmaEvent in mmaEvents){
+    for (var mmaEvent in mmaEvents) {
       fightString.write(mmaEvent.toString());
     }
 
@@ -195,16 +229,17 @@ class _MainPageState extends State<MainPage> {
                     onChanged: _toggleQueryPFL),
               ],
             ),
+            new Expanded(child: buttonOrNot()),
             new Expanded(
-                child: SingleChildScrollView(
-                  child: Text(
-                    statusString,
-                  ),
+              child: SingleChildScrollView(
+                child: Text(
+                  statusString,
                 ),
+              ),
             ),
             FloatingActionButton(
               onPressed: () {
-                _queryMMAWebsite();
+                //_queryMMAWebsite();
               },
             ),
           ],
