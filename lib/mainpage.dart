@@ -19,8 +19,7 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  String statusString =
-      ''; //Status string displayed to user
+  String statusString = ''; //Status string displayed to user
 
   //Booleans to track which mmaEvents to Query
   bool queryUFC = true;
@@ -35,7 +34,8 @@ class _MainPageState extends State<MainPage> {
   String _currentCalendarID = '';
   DeviceCalendarPlugin _deviceCalendarPlugin = new DeviceCalendarPlugin();
 
-  void _setCalendarCallback(String calendarID, String calendarName, DeviceCalendarPlugin deviceCal) {
+  void _setCalendarCallback(
+      String calendarID, String calendarName, DeviceCalendarPlugin deviceCal) {
     //Calendar Callback Function used by Calendar Page
     //Calendar Page will call the callback to provide calendar info needed
     //to load mma events into calendar
@@ -47,41 +47,61 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  Widget calendarButtonOrCalendar(){
+  Widget calendarButtonOrCalendar() {
     //Returns a calendar button that displays 'Select Calendar' or Returns a
     // Calendar Page if the button was pressed
-    if (!calendarSelected){
-      return new FlatButton.icon(icon: Icon(Icons.calendar_today),
-          label: Text(calendarButtonText),
+    if (!calendarSelected) {
+      return new FlatButton.icon(
+          icon: Icon(
+            Icons.calendar_today,
+            color: Colors.amber[600],
+          ),
+          label: Text(calendarButtonText,
+              style: Theme.of(context).textTheme.body1),
           onPressed: () {
-        setState(() {
-          calendarSelected = true;
-        });
-          }
-      );
+            setState(() {
+              calendarSelected = true;
+            });
+          });
     } else {
       return new CalendarPage(this._setCalendarCallback);
     }
   }
 
-  Widget loadFightsButton(){
+  Widget loadFightsButton() {
     // Returns a null button if the Calendar was not selected, otherwise it returns
     // a button that is not null and can be used to query fights from the web
     // and add them to the user's selected calendar
-    if(_currentCalendarID != ''){
+    if (_currentCalendarID != '') {
       return new FlatButton.icon(
           onPressed: _queryMMAWebsite,
-          icon: Icon(Icons.cached),
-          label: Text('Load Fights and Add to Calendar'));
+          icon: Icon(
+            Icons.cached,
+            color: Colors.amber[600],
+          ),
+          label: Text('Load Fights and Add to Calendar',
+              style: Theme.of(context).textTheme.body1));
     } else {
       return new FlatButton.icon(
           onPressed: null,
-          icon: Icon(Icons.cached),
-          label: Text('Load Fights and Add to Calendar'));
+          icon: Icon(
+            Icons.cached,
+            color: const Color(0xff979799),
+          ),
+          label: Text('Load Fights and Add to Calendar',
+              style: Theme.of(context).textTheme.subhead));
     }
   }
 
-  void setDeviceCalendarCallback(DeviceCalendarPlugin deviceCalendar){
+  Text statusMessageHeader(){
+    if(statusString != ''){
+      return new Text('Events Added/Updated in Calendar:\n', style: Theme.of(context).textTheme.body2 );
+    } else {
+      return new Text('');
+    }
+  }
+
+  void setDeviceCalendarCallback(DeviceCalendarPlugin deviceCalendar) {
     setState(() {
       _deviceCalendarPlugin = deviceCalendar;
     });
@@ -118,6 +138,9 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _queryMMAWebsite() {
+    //Reset the status back to blank, then query MMA events for MMA Events
+    //depending on the checkboxes the user selected
+    statusString = '';
     if (queryUFC) {
       _queryAndParseMMAWebsite('ufc');
     }
@@ -136,7 +159,6 @@ class _MainPageState extends State<MainPage> {
   }
 
   Future _addEventsToCalendar(List<MMAEvent> mmaEvents) async {
-
     //Method to add events to the user's calendar
     //If called, the list of mmaEvents will be iterated through and the mma
     // Events will be added to the user's selected calendar
@@ -148,44 +170,37 @@ class _MainPageState extends State<MainPage> {
     //If events are successfully created/added, then the events that were
     // CREATED/UPDATED will be displayed to the user in the status string
 
-    var fightString = new StringBuffer('Events Added/Updated in Calendar:\n');
+    var fightString = new StringBuffer('');
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     for (var mmaEvent in mmaEvents) {
-
       //Before adding MMA Event to calendar, check if it is ready for calendar
       // (i.e. ensure it is properly formatted)
-      if(mmaEvent.readyForCalendar){
-
+      if (mmaEvent.readyForCalendar) {
         final eventTime = mmaEvent.eventDate;
         final eventToCreate = new Event(_currentCalendarID);
         eventToCreate.title = mmaEvent.eventName;
         eventToCreate.start = eventTime;
         eventToCreate.description = mmaEvent.eventFights.toString();
         String mmaEventId = prefs.getString(mmaEvent.getPrefKey());
-        if(mmaEventId != null){
+        if (mmaEventId != null) {
           eventToCreate.eventId = mmaEventId;
         }
         eventToCreate.end = eventTime.add(new Duration(hours: 3));
-        final createEventResult = await _deviceCalendarPlugin
-            .createOrUpdateEvent(eventToCreate);
+        final createEventResult =
+            await _deviceCalendarPlugin.createOrUpdateEvent(eventToCreate);
         if (createEventResult.isSuccess &&
             (createEventResult.data?.isNotEmpty ?? false)) {
           prefs.setString(mmaEvent.getPrefKey(), createEventResult.data);
           fightString.write(mmaEvent.eventName + '\n');
         }
-
-
       }
-
     }
 
     setState(() {
-      statusString = fightString.toString();
+      statusString = statusString + fightString.toString();
     });
-
   }
-
 
   Future _queryAndParseMMAWebsite(String eventType) async {
     //Method to query mmafighting.com parse data for upcoming MMA Events
@@ -243,7 +258,6 @@ class _MainPageState extends State<MainPage> {
     //Add the queried events to the user's calendar
     _addEventsToCalendar(mmaEvents);
 
-
     return response.body;
   }
 
@@ -259,7 +273,7 @@ class _MainPageState extends State<MainPage> {
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: new Image.asset('assets/Logo.png'),
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
@@ -286,32 +300,39 @@ class _MainPageState extends State<MainPage> {
               children: <Widget>[
                 CheckboxListTile(
                     value: queryUFC,
-                    title: const Text('UFC'),
+                    title:
+                        Text('UFC', style: Theme.of(context).textTheme.body1),
                     onChanged: _toggleQueryUFC),
                 CheckboxListTile(
                     value: queryBellator,
-                    title: const Text('Bellator'),
+                    title: Text('Bellator',
+                        style: Theme.of(context).textTheme.body1),
                     onChanged: _toggleQueryBellator),
                 CheckboxListTile(
                     value: queryInvictaFC,
-                    title: const Text('Invicta FC'),
+                    title: Text('Invicta FC',
+                        style: Theme.of(context).textTheme.body1),
                     onChanged: _toggleQueryInvictaFC),
                 CheckboxListTile(
                     value: queryOneFC,
-                    title: const Text('One FC'),
+                    title: Text('One FC',
+                        style: Theme.of(context).textTheme.body1),
                     onChanged: _toggleQueryOneFC),
                 CheckboxListTile(
                     value: queryPFL,
-                    title: const Text('PFL'),
+                    title:
+                        Text('PFL', style: Theme.of(context).textTheme.body1),
                     onChanged: _toggleQueryPFL),
               ],
             ),
             new Expanded(child: calendarButtonOrCalendar()),
             loadFightsButton(),
+            statusMessageHeader(),
             new Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   statusString,
+                  style: Theme.of(context).textTheme.body1,
                 ),
               ),
             ),

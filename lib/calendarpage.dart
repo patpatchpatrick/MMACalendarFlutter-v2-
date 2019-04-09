@@ -65,7 +65,7 @@ class CalendarPageState extends State<CalendarPage> {
                         ),
                         new Icon(_calendars[index].isReadOnly
                             ? Icons.lock
-                            : Icons.lock_open)
+                            : Icons.lock_open, color: Colors.white,)
                       ],
                     ),
                   ),
