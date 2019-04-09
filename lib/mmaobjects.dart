@@ -100,5 +100,15 @@ class MMAEvent {
     eventFights.write('\n' + fight);
   }
 
+  String getPrefKey(){
+    //Key used for the shared prefs to store the calendar event ID in case
+    //the event needs to be updated
+    //The first 4 digits of the event name are used since event titles
+    //sometimes change, but the first 4 letters remain the same
+    //The date is also used since the first 4 digits of name may be shared with
+    //other events
+    return eventName.substring(0,4) + eventDate.toIso8601String();
+  }
+
 }
 

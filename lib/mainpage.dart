@@ -5,6 +5,7 @@ import 'package:html/parser.dart';
 import 'mmaobjects.dart';
 import 'package:device_calendar/device_calendar.dart';
 import 'package:mma_calendar_flutter/calendarpage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainPage extends StatefulWidget {
   MainPage({Key key, this.title}) : super(key: key);
@@ -20,27 +21,39 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   String statusString =
-      'Push the button to load MMA Events into Calendar'; //Status displayed to user
+      ''; //Status string displayed to user
+
+  //Booleans to track which mmaEvents to Query
   bool queryUFC = true;
   bool queryBellator = true;
   bool queryInvictaFC = true;
   bool queryPFL = true;
   bool queryOneFC = true;
+
+  //Calendar Variables
   bool calendarSelected = false;
+  String calendarButtonText = 'Select Calendar to Add Events';
   String _currentCalendarID = '';
   DeviceCalendarPlugin _deviceCalendarPlugin = new DeviceCalendarPlugin();
 
-  void setCalendarIDCallback(String calendarID, String calendarName) {
+  void _setCalendarCallback(String calendarID, String calendarName, DeviceCalendarPlugin deviceCal) {
+    //Calendar Callback Function used by Calendar Page
+    //Calendar Page will call the callback to provide calendar info needed
+    //to load mma events into calendar
     setState(() {
       _currentCalendarID = calendarID;
-      statusString = calendarID + calendarName;
+      calendarButtonText = calendarName;
+      _deviceCalendarPlugin = deviceCal;
       calendarSelected = false;
     });
   }
 
-  Widget buttonOrNot(){
+  Widget calendarButtonOrCalendar(){
+    //Returns a calendar button that displays 'Select Calendar' or Returns a
+    // Calendar Page if the button was pressed
     if (!calendarSelected){
-      return new IconButton(icon: Icon(Icons.calendar_today),
+      return new FlatButton.icon(icon: Icon(Icons.calendar_today),
+          label: Text(calendarButtonText),
           onPressed: () {
         setState(() {
           calendarSelected = true;
@@ -48,7 +61,24 @@ class _MainPageState extends State<MainPage> {
           }
       );
     } else {
-      return new CalendarPage(this.setCalendarIDCallback);
+      return new CalendarPage(this._setCalendarCallback);
+    }
+  }
+
+  Widget loadFightsButton(){
+    // Returns a null button if the Calendar was not selected, otherwise it returns
+    // a button that is not null and can be used to query fights from the web
+    // and add them to the user's selected calendar
+    if(_currentCalendarID != ''){
+      return new FlatButton.icon(
+          onPressed: _queryMMAWebsite,
+          icon: Icon(Icons.cached),
+          label: Text('Load Fights and Add to Calendar'));
+    } else {
+      return new FlatButton.icon(
+          onPressed: null,
+          icon: Icon(Icons.cached),
+          label: Text('Load Fights and Add to Calendar'));
     }
   }
 
@@ -106,6 +136,51 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  Future _addEventsToCalendar(List<MMAEvent> mmaEvents) async {
+
+    //Method to add events to the user's calendar
+    //If called, the list of mmaEvents will be iterated through and the mma
+    // Events will be added to the user's selected calendar
+
+    //If the events have previously been added by the user, they will have a
+    // shared preference key for the Event ID and the event will be UPDATED
+    // instead of CREATED
+
+    //If events are successfully created/added, then the events that were
+    // CREATED/UPDATED will be displayed to the user in the status string
+
+    var fightString = new StringBuffer('Events Added/Updated in Calendar:\n');
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    for (var mmaEvent in mmaEvents) {
+
+      final eventTime = mmaEvent.eventDate;
+      final eventToCreate = new Event(_currentCalendarID);
+      eventToCreate.title = mmaEvent.eventName;
+      eventToCreate.start = eventTime;
+      eventToCreate.description = mmaEvent.eventFights.toString();
+      String mmaEventId = prefs.getString(mmaEvent.getPrefKey());
+      if(mmaEventId != null){
+        eventToCreate.eventId = mmaEventId;
+      }
+      eventToCreate.end = eventTime.add(new Duration(hours: 3));
+      final createEventResult = await _deviceCalendarPlugin
+          .createOrUpdateEvent(eventToCreate);
+      if (createEventResult.isSuccess &&
+          (createEventResult.data?.isNotEmpty ?? false)) {
+        prefs.setString(mmaEvent.getPrefKey(), createEventResult.data);
+        fightString.write(mmaEvent.eventName + '\n');
+      }
+
+    }
+
+    setState(() {
+      statusString = statusString + fightString.toString();
+    });
+
+  }
+
+
   Future _queryAndParseMMAWebsite(String eventType) async {
     //Method to query mmafighting.com parse data for upcoming MMA Events
     //eventType can be 'UFC', 'Bellator', 'Invicta-FC', 'PFL', 'ONE FC'
@@ -135,7 +210,6 @@ class _MainPageState extends State<MainPage> {
     //Event titles all contain 'fight-card' in link HREF attribute
     //Fights all contain '/fight/' in the link HREF attribute
     var fightLinks = document.querySelectorAll('a');
-    var fightString = new StringBuffer('');
 
     //List of MMA Events to create from parsed data
     List<MMAEvent> mmaEvents = [];
@@ -160,13 +234,10 @@ class _MainPageState extends State<MainPage> {
       }
     }
 
-    for (var mmaEvent in mmaEvents) {
-      fightString.write(mmaEvent.toString());
-    }
+    //Add the queried events to the user's calendar
+    _addEventsToCalendar(mmaEvents);
 
-    setState(() {
-      statusString = statusString + fightString.toString();
-    });
+
     return response.body;
   }
 
@@ -229,18 +300,14 @@ class _MainPageState extends State<MainPage> {
                     onChanged: _toggleQueryPFL),
               ],
             ),
-            new Expanded(child: buttonOrNot()),
+            new Expanded(child: calendarButtonOrCalendar()),
+            loadFightsButton(),
             new Expanded(
               child: SingleChildScrollView(
                 child: Text(
                   statusString,
                 ),
               ),
-            ),
-            FloatingActionButton(
-              onPressed: () {
-                //_queryMMAWebsite();
-              },
             ),
           ],
         ),

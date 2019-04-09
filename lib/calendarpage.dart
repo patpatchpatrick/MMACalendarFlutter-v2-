@@ -53,7 +53,7 @@ class CalendarPageState extends State<CalendarPage> {
                     await _retrieveCalendarEvents(_calendars[index].id);
                     setState(() {
                       _selectedCalendar = _calendars[index];
-                      this.widget.calendarIDCallback(_selectedCalendar.id, _selectedCalendar.name);
+                      this.widget.calendarIDCallback(_selectedCalendar.id, _selectedCalendar.name, _deviceCalendarPlugin);
                     });
                   },
                   child: new Padding(
