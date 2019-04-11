@@ -4,7 +4,7 @@ Automatically creates calendar events for upcoming MMA events using web-scraping
 
 App was built using Flutter/Dart so it can be deployed to both Android and iOS Mobile Devices
 
-[Medium Article Discussing How I Integrated Device_Calendar Library into the App](https://medium.com/@patpatchpatrick/adding-the-google-play-billing-library-to-your-application-fbeb9ec03151 "Medium Article on How I Integrated Device_Calendar Library into App")
+[Medium Article Discussing How I Integrated Device_Calendar Library into the App](https://medium.com/@patpatchpatrick/using-device-calendar-library-in-flutter-to-communicate-with-android-ios-calendar-95b2d8c77b40 "Medium Article on How I Integrated Device_Calendar Library into App")
 
 ## Simple Instructions
 
