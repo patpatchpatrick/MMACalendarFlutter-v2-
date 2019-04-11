@@ -142,19 +142,19 @@ class _MainPageState extends State<MainPage> {
     //depending on the checkboxes the user selected
     statusString = '';
     if (queryUFC) {
-      _queryAndParseMMAWebsite('ufc');
+      _queryAndParseWebsiteUFCBellator('ufc');
     }
     if (queryBellator) {
-      _queryAndParseMMAWebsite('bellator');
+      _queryAndParseWebsiteUFCBellator('bellator');
     }
     if (queryInvictaFC) {
-      _queryAndParseMMAWebsite('invicta-fc');
+      _queryAndParseWebsiteUFCBellator('invicta-fc');
     }
     if (queryOneFC) {
-      _queryAndParseMMAWebsite('one-fc');
+      _queryAndParseWebsiteUFCBellator('one-fc');
     }
     if (queryPFL) {
-      _queryAndParseMMAWebsite('pfl');
+      _queryAndParseWebsiteUFCBellator('pfl');
     }
   }
 
@@ -202,7 +202,7 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  Future _queryAndParseMMAWebsite(String eventType) async {
+  Future _queryAndParseWebsiteUFCBellator(String eventType) async {
     //Method to query mmafighting.com parse data for upcoming MMA Events
     //eventType can be 'UFC', 'Bellator', 'Invicta-FC', 'PFL', 'ONE FC'
     //Different event types are queried depending on which checkboxes user has selected from main page UI
