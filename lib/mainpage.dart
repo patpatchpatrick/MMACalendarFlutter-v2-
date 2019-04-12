@@ -24,17 +24,16 @@ class _MainPageState extends State<MainPage> {
   //Booleans to track which mmaEvents to Query
   bool queryUFC = true;
   bool queryBellator = true;
-  bool queryInvictaFC = true;
-  bool queryPFL = true;
   bool queryOneFC = true;
 
   //Calendar Variables
+  bool deleted = false;
   bool calendarSelected = false;
   String calendarButtonText = 'Select Calendar to Add Events';
   String _currentCalendarID = '';
   DeviceCalendarPlugin _deviceCalendarPlugin = new DeviceCalendarPlugin();
 
-  void _setCalendarCallback(
+  bool _setCalendarCallback(
       String calendarID, String calendarName, DeviceCalendarPlugin deviceCal) {
     //Calendar Callback Function used by Calendar Page
     //Calendar Page will call the callback to provide calendar info needed
@@ -74,7 +73,7 @@ class _MainPageState extends State<MainPage> {
     // and add them to the user's selected calendar
     if (_currentCalendarID != '') {
       return new FlatButton.icon(
-          onPressed: _queryMMAWebsite,
+          onPressed: (){_queryMMAWebsite(false);},
           icon: Icon(
             Icons.cached,
             color: Colors.amber[600],
@@ -93,9 +92,38 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  Widget deleteFightsButton() {
+    // Returns a null button if the Calendar was not selected, otherwise it returns
+    // a button that is not null and can be used to query fights from the web
+    // and delete them from the user's selected calendar
+    if (_currentCalendarID != '') {
+      return new FlatButton.icon(
+          onPressed: (){_queryMMAWebsite(true);},
+          icon: Icon(
+            Icons.delete,
+            color: Colors.amber[600],
+          ),
+          label: Text('Delete Fights From Calendar',
+              style: Theme.of(context).textTheme.body1));
+    } else {
+      return new FlatButton.icon(
+          onPressed: null,
+          icon: Icon(
+            Icons.delete,
+            color: const Color(0xff979799),
+          ),
+          label: Text('Delete Fights From Calendar',
+              style: Theme.of(context).textTheme.subhead));
+    }
+  }
+
   Text statusMessageHeader(){
     if(statusString != ''){
-      return new Text('Events Added/Updated in Calendar:\n', style: Theme.of(context).textTheme.body2 );
+      if(deleted){
+        return new Text('Events Deleted in Calendar:\n', style: Theme.of(context).textTheme.body2 );
+      } else {
+        return new Text('Events Added/Updated in Calendar:\n', style: Theme.of(context).textTheme.body2 );
+      }
     } else {
       return new Text('');
     }
@@ -119,42 +147,30 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  void _toggleQueryInvictaFC(bool) {
-    setState(() {
-      queryInvictaFC = bool;
-    });
-  }
-
-  void _toggleQueryPFL(bool) {
-    setState(() {
-      queryPFL = bool;
-    });
-  }
-
   void _toggleQueryOneFC(bool) {
     setState(() {
       queryOneFC = bool;
     });
   }
 
-  void _queryMMAWebsite() {
+  void _queryMMAWebsite(delete) {
     //Reset the status back to blank, then query MMA events for MMA Events
     //depending on the checkboxes the user selected
+    //Bool 'delete' indicates whether events should be deleted or added to calendar
     statusString = '';
+    setState(() {
+      //Update the global deleted bool variable so the status string displays
+      //correct header
+      deleted = delete;
+    });
     if (queryUFC) {
-      _queryAndParseWebsiteUFCBellator('ufc', false);
+      _queryAndParseWebsiteUFCBellator('ufc', delete);
     }
     if (queryBellator) {
-      _queryAndParseWebsiteUFCBellator('bellator', false);
-    }
-    if (queryInvictaFC) {
-      _queryAndParseWebsiteUFCBellator('invicta-fc', false);
+      _queryAndParseWebsiteUFCBellator('bellator', delete);
     }
     if (queryOneFC) {
-      _queryAndParseWebsiteOneFC(false);
-    }
-    if (queryPFL) {
-      _queryAndParseWebsiteUFCBellator('pfl', false);
+      _queryAndParseWebsiteOneFC(delete);
     }
   }
 
@@ -183,8 +199,13 @@ class _MainPageState extends State<MainPage> {
         eventToCreate.start = eventTime;
         eventToCreate.description = mmaEvent.eventDetails.toString();
         String mmaEventId = prefs.getString(mmaEvent.getPrefKey());
+        bool previouslyDeleted = prefs.getBool(mmaEvent.getPrefBoolKey());
         if (mmaEventId != null) {
-          eventToCreate.eventId = mmaEventId;
+          if (previouslyDeleted != null && !previouslyDeleted){
+            //If the event already has an ID (was already added) and has not
+            //been previously deleted, set the ID on the event to update
+            eventToCreate.eventId = mmaEventId;
+          }
         }
         eventToCreate.end = eventTime.add(new Duration(hours: 3));
         final createEventResult =
@@ -229,6 +250,8 @@ class _MainPageState extends State<MainPage> {
           await _deviceCalendarPlugin.deleteEvent(_currentCalendarID, eventToCreate.eventId);
           if (createEventResult.isSuccess) {
             fightString.write(mmaEvent.eventName + '\n');
+            //Set bool pref indicating event has been previously deleted
+            prefs.setBool(mmaEvent.getPrefBoolKey(), true);
           }
         }
       }
@@ -423,24 +446,15 @@ class _MainPageState extends State<MainPage> {
                         style: Theme.of(context).textTheme.body1),
                     onChanged: _toggleQueryBellator),
                 CheckboxListTile(
-                    value: queryInvictaFC,
-                    title: Text('Invicta FC',
-                        style: Theme.of(context).textTheme.body1),
-                    onChanged: _toggleQueryInvictaFC),
-                CheckboxListTile(
                     value: queryOneFC,
                     title: Text('One FC',
                         style: Theme.of(context).textTheme.body1),
                     onChanged: _toggleQueryOneFC),
-                CheckboxListTile(
-                    value: queryPFL,
-                    title:
-                        Text('PFL', style: Theme.of(context).textTheme.body1),
-                    onChanged: _toggleQueryPFL),
               ],
             ),
             new Expanded(child: calendarButtonOrCalendar()),
             loadFightsButton(),
+            deleteFightsButton(),
             statusMessageHeader(),
             new Expanded(
               child: SingleChildScrollView(

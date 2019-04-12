@@ -191,5 +191,12 @@ class MMAEvent {
     return eventName.substring(0,4) + eventDate.toIso8601String();
   }
 
+  String getPrefBoolKey(){
+    //Key used for bool preferences
+    //Preferences must have different keys in shared_prefs library
+    // or else conflicts occur
+    return eventName.substring(0,5) + eventDate.toIso8601String();
+  }
+
 }
 
