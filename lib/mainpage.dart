@@ -142,19 +142,19 @@ class _MainPageState extends State<MainPage> {
     //depending on the checkboxes the user selected
     statusString = '';
     if (queryUFC) {
-      _queryAndParseWebsiteUFCBellator('ufc', true);
+      _queryAndParseWebsiteUFCBellator('ufc', false);
     }
     if (queryBellator) {
-      _queryAndParseWebsiteUFCBellator('bellator', true);
+      _queryAndParseWebsiteUFCBellator('bellator', false);
     }
     if (queryInvictaFC) {
-      _queryAndParseWebsiteUFCBellator('invicta-fc', true);
+      _queryAndParseWebsiteUFCBellator('invicta-fc', false);
     }
     if (queryOneFC) {
-      _queryAndParseWebsiteOneFC(true);
+      _queryAndParseWebsiteOneFC(false);
     }
     if (queryPFL) {
-      _queryAndParseWebsiteUFCBellator('pfl', true);
+      _queryAndParseWebsiteUFCBellator('pfl', false);
     }
   }
 
@@ -203,16 +203,16 @@ class _MainPageState extends State<MainPage> {
   }
 
   Future _deleteEventsFromCalendar(List<MMAEvent> mmaEvents) async {
-    //Method to add events to the user's calendar
+    //Method to delete events from the user's calendar
     //If called, the list of mmaEvents will be iterated through and the mma
-    // Events will be added to the user's selected calendar
+    // Events will be deleted from the user's selected calendar if they were
+    // previously added
 
     //If the events have previously been added by the user, they will have a
-    // shared preference key for the Event ID and the event will be UPDATED
-    // instead of CREATED
+    // shared preference key for the Event ID and the event will be DELETED
 
-    //If events are successfully created/added, then the events that were
-    // CREATED/UPDATED will be displayed to the user in the status string
+    //If the events have not been previously added, then the delete method will
+    //not be called on them
 
     var fightString = new StringBuffer('');
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -292,10 +292,12 @@ class _MainPageState extends State<MainPage> {
       }
     }
 
-    //Add the queried events to the user's calendar
+    //Check if events are being deleted or added/updated
     if(!delete){
+      //Add the queried events to the user's calendar
       _addEventsToCalendar(mmaEvents);
     } else {
+      //Delete events from the user's calendar
       _deleteEventsFromCalendar(mmaEvents);
     }
 
@@ -360,10 +362,12 @@ class _MainPageState extends State<MainPage> {
       }
     }
 
+    //Check if events are being deleted or added/updated
     if(!delete){
       //Add the queried events to the user's calendar
       _addEventsToCalendar(mmaEvents);
     } else {
+      //Delete events from the user's calendar
       _deleteEventsFromCalendar(mmaEvents);
     }
 
