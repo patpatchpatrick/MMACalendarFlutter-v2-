@@ -6,27 +6,27 @@ class MMAEvent {
   bool readyForCalendar = true;
   String eventName;
   DateTime eventDate;
-  StringBuffer eventFights = new StringBuffer(''); //StringBuffer to display list of fights
+  StringBuffer eventDetails = new StringBuffer(''); //StringBuffer to display list of fights
 
   MMAEvent(this.eventName);
 
   @override
   String toString() {
     return '\n' + this.eventName + '\nDate: ' + this.eventDate.toIso8601String() +
-        '\nFights: ' + eventFights.toString();
+        '\nFights: ' + eventDetails.toString();
   }
 
-  void addDate(String date){
-
+  void addDateUFCBellator(String date){
+    //Add event date for UFC and Bellator Events
     //Add a dateTime for this event based on input String date parsed from website
 
-    //Website date is in the following example format 'May 3, 2019'
+    //Website date for UFC and Bellator events is in the following example format 'May 3, 2019'
     //Split the date by space to separate Month, Day and Year
     List<String> dateSplit = date.split(' ');
 
     //Create StringBuffer for formatted string for DateTime to parse using dateTime.parse() method
-    //StringBuffer will be in format 'YYYY-MM-DD 12:00:00'
-    //Time will be left as 12:00:00 for now since mmafighting website doesn't have event times
+    //StringBuffer will be in format 'YYYY-MM-DD 17:00:00'
+    //Time will be left as 17:00:00 for now since mmafighting website doesn't have event times
     StringBuffer formattedDateString = new StringBuffer('');
     
     String year = dateSplit.elementAt(2);
@@ -81,10 +81,12 @@ class MMAEvent {
         break;
     }
 
-    formattedDateString.write(day + ' 12:00:00');
+    formattedDateString.write(day + ' 17:00:00');
 
     try{
       this.eventDate = DateTime.parse(formattedDateString.toString());
+      //Convert time to UTC Pacific time
+      this.eventDate = new DateTime.utc(eventDate.year, eventDate.month, eventDate.day, eventDate.hour + 6);
     } catch(e){
       //If exception occurs when parsing date, ensure that date is not added to calendar
       readyForCalendar = false;
@@ -93,9 +95,90 @@ class MMAEvent {
 
   }
 
-  void addFight(String fight){
-    //Add a fight to the fights String Buffer
-    eventFights.write('\n' + fight);
+  void addDateOneFC(String date){
+    //Add event date for OneFC Events
+    //Add a dateTime for this event based on input String date parsed from website
+
+    //Website date is in the following example format '06 Dec 2019'
+    //Split the date by space to separate Month, Day and Year
+    List<String> dateSplit = date.split(' ');
+
+    //Create StringBuffer for formatted string for DateTime to parse using dateTime.parse() method
+    //StringBuffer will be in format 'YYYY-MM-DD 17:00:00'
+    //Time will be left as 05:00:00 for now since website doesn't have event times
+    StringBuffer formattedDateString = new StringBuffer('');
+
+    String year = dateSplit.elementAt(2);
+    String month = dateSplit.elementAt(1);
+    String day = dateSplit.elementAt(0);
+    if(day.length == 1){
+      //If the day is 1 digit, it must have a 0 in front of it for dateTime.parse() method to work properly
+      day = '0' + day;
+    }
+
+    formattedDateString.write(year + '-');
+
+    switch (month) {
+      case 'Jan':
+        formattedDateString.write('01-');
+        break;
+      case 'Feb':
+        formattedDateString.write('02-');
+        break;
+      case 'Mar':
+        formattedDateString.write('03-');
+        break;
+      case 'Apr':
+        formattedDateString.write('04-');
+        break;
+      case 'May':
+        formattedDateString.write('05-');
+        break;
+      case 'Jun':
+        formattedDateString.write('06-');
+        break;
+      case 'Jul':
+        formattedDateString.write('07-');
+        break;
+      case 'Aug':
+        formattedDateString.write('08-');
+        break;
+      case 'Sep':
+        formattedDateString.write('09-');
+        break;
+      case 'Oct':
+        formattedDateString.write('10-');
+        break;
+      case 'Nov':
+        formattedDateString.write('11-');
+        break;
+      case 'Dec':
+        formattedDateString.write('12-');
+        break;
+      default:
+        formattedDateString.write('01-');
+        break;
+    }
+
+    formattedDateString.write(day + ' 17:00:00');
+
+    try{
+      this.eventDate = DateTime.parse(formattedDateString.toString());
+      //Convert date to UTC Beijing time
+      this.eventDate = new DateTime.utc(eventDate.year, eventDate.month, eventDate.day, eventDate.hour - 8);
+    } catch(e){
+      //If exception occurs when parsing date, ensure that date is not added to calendar
+      readyForCalendar = false;
+    }
+
+
+  }
+
+  void addDetails(String fight){
+    //Add a details to the eventDetails String Buffer
+    //Details typically consist of fight info (i.e. Guy1 vs. Guy2) or location
+    //info (i.e. Beijing)
+    eventDetails.write('\n' + fight);
   }
 
   String getPrefKey(){

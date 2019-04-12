@@ -142,19 +142,19 @@ class _MainPageState extends State<MainPage> {
     //depending on the checkboxes the user selected
     statusString = '';
     if (queryUFC) {
-      _queryAndParseWebsiteUFCBellator('ufc');
+      _queryAndParseWebsiteUFCBellator('ufc', true);
     }
     if (queryBellator) {
-      _queryAndParseWebsiteUFCBellator('bellator');
+      _queryAndParseWebsiteUFCBellator('bellator', true);
     }
     if (queryInvictaFC) {
-      _queryAndParseWebsiteUFCBellator('invicta-fc');
+      _queryAndParseWebsiteUFCBellator('invicta-fc', true);
     }
     if (queryOneFC) {
-      _queryAndParseWebsiteUFCBellator('one-fc');
+      _queryAndParseWebsiteOneFC(true);
     }
     if (queryPFL) {
-      _queryAndParseWebsiteUFCBellator('pfl');
+      _queryAndParseWebsiteUFCBellator('pfl', true);
     }
   }
 
@@ -181,7 +181,7 @@ class _MainPageState extends State<MainPage> {
         final eventToCreate = new Event(_currentCalendarID);
         eventToCreate.title = mmaEvent.eventName;
         eventToCreate.start = eventTime;
-        eventToCreate.description = mmaEvent.eventFights.toString();
+        eventToCreate.description = mmaEvent.eventDetails.toString();
         String mmaEventId = prefs.getString(mmaEvent.getPrefKey());
         if (mmaEventId != null) {
           eventToCreate.eventId = mmaEventId;
@@ -202,9 +202,46 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  Future _queryAndParseWebsiteUFCBellator(String eventType) async {
+  Future _deleteEventsFromCalendar(List<MMAEvent> mmaEvents) async {
+    //Method to add events to the user's calendar
+    //If called, the list of mmaEvents will be iterated through and the mma
+    // Events will be added to the user's selected calendar
+
+    //If the events have previously been added by the user, they will have a
+    // shared preference key for the Event ID and the event will be UPDATED
+    // instead of CREATED
+
+    //If events are successfully created/added, then the events that were
+    // CREATED/UPDATED will be displayed to the user in the status string
+
+    var fightString = new StringBuffer('');
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    for (var mmaEvent in mmaEvents) {
+      //Before adding MMA Event to calendar, check if it is ready for calendar
+      // (i.e. ensure it is properly formatted)
+      if (mmaEvent.readyForCalendar) {
+        final eventToCreate = new Event(_currentCalendarID);
+        String mmaEventId = prefs.getString(mmaEvent.getPrefKey());
+        if (mmaEventId != null) {
+          eventToCreate.eventId = mmaEventId;
+          final createEventResult =
+          await _deviceCalendarPlugin.deleteEvent(_currentCalendarID, eventToCreate.eventId);
+          if (createEventResult.isSuccess) {
+            fightString.write(mmaEvent.eventName + '\n');
+          }
+        }
+      }
+    }
+
+    setState(() {
+      statusString = statusString + fightString.toString();
+    });
+  }
+
+  Future _queryAndParseWebsiteUFCBellator(String eventType, bool delete) async {
     //Method to query mmafighting.com parse data for upcoming MMA Events
-    //eventType can be 'UFC', 'Bellator', 'Invicta-FC', 'PFL', 'ONE FC'
+    //eventType can be 'UFC' or 'Bellator'
     //Different event types are queried depending on which checkboxes user has selected from main page UI
 
     var client = Client();
@@ -246,17 +283,90 @@ class _MainPageState extends State<MainPage> {
         if (eventDateIterator.moveNext()) {
           //For every event name, there is an associated date (in the same order)
           //Move the iterator to the next date and add the date to the MMA Event
-          mmaEvent.addDate(eventDateIterator.current.text);
+          mmaEvent.addDateUFCBellator(eventDateIterator.current.text);
         }
       } else if (title != null && href != null && href.contains('/fight/')) {
         //If the link contains '/fight/' then it is fight data
         //Add the fight data to the current event (last event in list of MMA events)
-        mmaEvents.elementAt(mmaEvents.length - 1).addFight(title);
+        mmaEvents.elementAt(mmaEvents.length - 1).addDetails(title);
       }
     }
 
     //Add the queried events to the user's calendar
-    _addEventsToCalendar(mmaEvents);
+    if(!delete){
+      _addEventsToCalendar(mmaEvents);
+    } else {
+      _deleteEventsFromCalendar(mmaEvents);
+    }
+
+    return response.body;
+  }
+
+  Future _queryAndParseWebsiteOneFC(bool delete) async {
+    //Method to query onefc.com parse data for upcoming MMA Events
+
+    var client = Client();
+    StringBuffer url = new StringBuffer('https://www.onefc.com/events/');
+    Response response = await client.get(url.toString());
+
+    if (response.statusCode != 200) {
+      //If HTTP OK response is not received, return empty body and let user
+      //know if connection error
+      setState(() {
+        statusString = 'Error Connecting to Network';
+      });
+      return response.body;
+    }
+
+    var document = parse(response.body);
+
+    //Get Dates (Dates all have div headers with class=date)
+    var eventDate = document.querySelectorAll('div.date');
+    var eventDateIterator = eventDate.iterator;
+    //Move iterator by 1 so current bout is not added to calendar
+    //Only future bouts are added to calendar
+    eventDateIterator.moveNext();
+
+    //Get Location and Event Titles
+    var fightLinks = document.querySelectorAll('h3.title');
+    var location = document.querySelectorAll('div.location');
+    var locationIterator = location.iterator;
+    //Skip the 1st (current) location
+    //Only locations associated with future events are added to calendar
+    locationIterator.moveNext();
+
+    //List of MMA Events to create from parsed data
+    List<MMAEvent> mmaEvents = [];
+
+    for (var link in fightLinks) {
+      String title = link.text;
+      if (title != null ) {
+        //Create a new event with the event name
+        var mmaEvent = new MMAEvent(title);
+        if (eventDateIterator.moveNext()) {
+          mmaEvents.add(mmaEvent);
+          //For every event name, there is an associated date and location
+          //(in the same order)
+          //Move the iterator to the next date and add the date to the MMA Event
+          mmaEvent.addDateOneFC(eventDateIterator.current.text);
+          if(locationIterator.moveNext()){
+            //Move the iterator to the next location and add to the MMA Eevnt
+            mmaEvent.addDetails(locationIterator.current.text);
+          }
+        } else {
+          break;
+        }
+
+      }
+    }
+
+    if(!delete){
+      //Add the queried events to the user's calendar
+      _addEventsToCalendar(mmaEvents);
+    } else {
+      _deleteEventsFromCalendar(mmaEvents);
+    }
+
 
     return response.body;
   }
